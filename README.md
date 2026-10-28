@@ -6,7 +6,8 @@ GitHub Pages(정적 페이지) + Supabase(데이터 저장). 구글 계정으로
 
 1. https://supabase.com 에서 새 프로젝트 생성 (무료 플랜, 리전은 Northeast Asia 추천)
 2. **SQL Editor** → `supabase/schema.sql` 내용 붙여넣고 Run
-3. 로그인은 이메일 매직 링크(기본 Email provider)를 사용. 별도 설정 없음.
+3. 로그인은 이메일 + 비밀번호. 처음 한 번만 이메일 링크로 로그인한 뒤 하단 "비밀번호 설정"으로 비밀번호를 만들면, 이후 모든 PC에서 비밀번호로 로그인 (메일 불필요).
+   - Supabase 기본 메일은 시간당 2통 제한이 있어 이메일 링크는 최소한만 사용.
 4. **Authentication → URL Configuration**
    - Site URL: `https://rnjsdbswo123.github.io/startapp/`
    - Redirect URLs: 위 주소와 `http://localhost:3000/` 둘 다 추가

@@ -66,6 +66,7 @@
       <button id="edit-toggle" type="button" class="ghost"><span class="edit-icon">+</span><span class="edit-label">즐겨찾기 편집</span></button>
       <div class="foot-right">
         <span id="who" class="who"></span>
+        <button id="set-pw" type="button" class="ghost hidden">비밀번호 설정</button>
         <button id="logout" type="button" class="ghost hidden">로그아웃</button>
         <button id="theme-toggle" type="button" class="ghost">라이트 모드</button>
       </div>
@@ -79,8 +80,10 @@
   <form id="login" class="auth-card">
     <div class="auth-title">시작 페이지</div>
     <div class="auth-desc">즐겨찾기와 할 일을 모든 PC에서 같이 쓰려면 로그인하세요.</div>
-    <input id="login-email" type="email" placeholder="이메일" required />
-    <button type="submit" class="btn-accent">로그인 링크 받기</button>
+    <input id="login-email" type="email" placeholder="이메일" autocomplete="username" required />
+    <input id="login-pw" type="password" placeholder="비밀번호" autocomplete="current-password" />
+    <button type="submit" class="btn-accent">로그인</button>
+    <button type="button" id="login-link" class="ghost auth-alt">비밀번호 대신 이메일 링크로 로그인</button>
     <div id="auth-status" class="auth-status"></div>
   </form>
 </div>

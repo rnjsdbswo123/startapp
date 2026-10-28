@@ -76,13 +76,30 @@ $("theme-toggle").onclick = () => {
 };
 
 // ---------- 인증 ----------
+// 비밀번호 로그인 (메일 안 씀)
 $("login").onsubmit = async (e) => {
   e.preventDefault();
+  const email = $("login-email").value.trim(), password = $("login-pw").value;
+  if (!password) { $("auth-status").textContent = "비밀번호를 입력하세요. 아직 없으면 아래 이메일 링크로 로그인한 뒤 '비밀번호 설정'을 누르세요."; return; }
+  const { error } = await sb.auth.signInWithPassword({ email, password });
+  $("auth-status").textContent = error ? "로그인 실패: " + error.message : "";
+};
+// 이메일 링크 로그인 (Supabase 기본 메일은 시간당 2통 제한)
+$("login-link").onclick = async () => {
   const email = $("login-email").value.trim();
+  if (!email) { $("auth-status").textContent = "이메일을 입력하세요."; return; }
   const { error } = await sb.auth.signInWithOtp({ email, options: { emailRedirectTo: location.origin + location.pathname } });
   $("auth-status").textContent = error ? error.message : `${email} 로 로그인 링크를 보냈어요. 메일을 확인하세요.`;
 };
 $("logout").onclick = () => sb.auth.signOut();
+// 로그인된 상태에서 비밀번호 지정/변경 (메일 안 감)
+$("set-pw").onclick = async () => {
+  const pw = prompt("새 비밀번호 (6자 이상). 다른 PC에서 이메일 + 이 비밀번호로 로그인하게 됩니다.");
+  if (pw == null) return;
+  if (pw.length < 6) return toast("6자 이상이어야 해요.");
+  const { error } = await sb.auth.updateUser({ password: pw });
+  toast(error ? "실패: " + error.message : "비밀번호가 설정됐어요.");
+};
 const DEMO = new URLSearchParams(location.search).has("demo");
 if (DEMO) {
   // ?demo : 로그인 없이 샘플 데이터로 화면만 미리보기 (저장 안 됨)
@@ -106,6 +123,7 @@ async function onSession(session) {
   S.session = session;
   $("auth").classList.toggle("hidden", !!session);
   $("logout").classList.toggle("hidden", !session);
+  $("set-pw").classList.toggle("hidden", !session);
   $("who").textContent = session ? session.user.email : "";
   if (!session) { S.links = []; S.todos = []; stopRealtime(); render(); return; }
   await loadAll();
