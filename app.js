@@ -92,13 +92,17 @@ $("login-link").onclick = async () => {
   $("auth-status").textContent = error ? error.message : `${email} 로 로그인 링크를 보냈어요. 메일을 확인하세요.`;
 };
 $("logout").onclick = () => sb.auth.signOut();
-// 로그인된 상태에서 비밀번호 지정/변경 (메일 안 감)
-$("set-pw").onclick = async () => {
-  const pw = prompt("새 비밀번호 (6자 이상). 다른 PC에서 이메일 + 이 비밀번호로 로그인하게 됩니다.");
-  if (pw == null) return;
-  if (pw.length < 6) return toast("6자 이상이어야 해요.");
+// 로그인된 상태에서 비밀번호 지정/변경 (HTTPS로 전송, Supabase가 bcrypt로 해시 저장)
+$("set-pw").onclick = () => { $("pw-form").reset(); $("pw-status").textContent = ""; $("pw-modal").classList.remove("hidden"); $("pw-new").focus(); };
+$("pw-cancel").onclick = () => $("pw-modal").classList.add("hidden");
+$("pw-form").onsubmit = async (e) => {
+  e.preventDefault();
+  const pw = $("pw-new").value, pw2 = $("pw-confirm").value;
+  if (pw !== pw2) { $("pw-status").textContent = "비밀번호가 서로 달라요."; return; }
   const { error } = await sb.auth.updateUser({ password: pw });
-  toast(error ? "실패: " + error.message : "비밀번호가 설정됐어요.");
+  if (error) { $("pw-status").textContent = "실패: " + error.message; return; }
+  $("pw-modal").classList.add("hidden");
+  toast("비밀번호가 설정됐어요. 이제 어느 PC에서든 이메일 + 비밀번호로 로그인하세요.");
 };
 const DEMO = new URLSearchParams(location.search).has("demo");
 if (DEMO) {
