@@ -8,7 +8,7 @@ GitHub Pages(정적 페이지) + Supabase(데이터 저장). 구글 계정으로
 2. **SQL Editor** → `supabase/schema.sql` 내용 붙여넣고 Run
 3. 로그인은 이메일 매직 링크(기본 Email provider)를 사용. 별도 설정 없음.
 4. **Authentication → URL Configuration**
-   - Site URL: `https://<깃허브아이디>.github.io/startapp/`
+   - Site URL: `https://rnjsdbswo123.github.io/startapp/`
    - Redirect URLs: 위 주소와 `http://localhost:3000/` 둘 다 추가
 5. **Project Settings → API** 에서 Project URL과 anon public key를 복사해 `config.js`에 입력
 
@@ -26,7 +26,7 @@ git init && git add . && git commit -m "init"
 gh repo create startapp --public --source=. --push
 ```
 GitHub 저장소 → Settings → Pages → Branch: `main` / `(root)` 저장.
-몇 분 뒤 `https://<깃허브아이디>.github.io/startapp/` 에서 열립니다.
+몇 분 뒤 `https://rnjsdbswo123.github.io/startapp/` 에서 열립니다.
 
 ## 4. 크롬 설정 (PC마다 한 번, 설정 자체는 계정 동기화됨)
 
