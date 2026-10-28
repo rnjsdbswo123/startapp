@@ -1,0 +1,68 @@
+/* 임시 스타일. Claude Design에서 내보낸 디자인으로 교체 예정. */
+:root {
+  --bg: #0f1115;
+  --fg: #e6e6e6;
+  --muted: #8a8f98;
+  --card: #1a1d24;
+  --accent: #5b9dff;
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  min-height: 100vh;
+  background: var(--bg);
+  color: var(--fg);
+  font-family: -apple-system, "Pretendard", "Noto Sans KR", system-ui, sans-serif;
+  display: flex;
+  justify-content: center;
+}
+.page { width: min(720px, 100% - 32px); padding: 10vh 0 40px; }
+.hidden { display: none !important; }
+
+.top { text-align: center; margin-bottom: 32px; }
+.clock { font-size: 64px; font-weight: 200; letter-spacing: -2px; }
+.date { color: var(--muted); margin-top: 4px; }
+
+.search input {
+  width: 100%; padding: 14px 20px; font-size: 18px;
+  border-radius: 999px; border: 1px solid #2a2e37;
+  background: var(--card); color: var(--fg); outline: none;
+}
+.search input:focus { border-color: var(--accent); }
+
+.auth { text-align: center; margin-top: 48px; color: var(--muted); }
+
+.links {
+  list-style: none; padding: 0; margin: 40px 0 24px;
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 12px;
+}
+.links li { position: relative; }
+.links a {
+  display: flex; flex-direction: column; align-items: center; gap: 8px;
+  padding: 16px 8px; background: var(--card); border-radius: 12px;
+  color: var(--fg); text-decoration: none; font-size: 13px; text-align: center;
+  transition: background .15s;
+}
+.links a:hover { background: #242833; }
+.links img { width: 28px; height: 28px; border-radius: 6px; }
+.links .del {
+  position: absolute; top: 6px; right: 6px;
+  width: 20px; height: 20px; border-radius: 50%; border: 0;
+  background: #333842; color: var(--muted); cursor: pointer; font-size: 12px;
+  opacity: 0; transition: opacity .15s;
+}
+.links li:hover .del { opacity: 1; }
+
+.add { display: flex; gap: 8px; }
+.add input {
+  flex: 1; padding: 10px 12px; border-radius: 8px;
+  border: 1px solid #2a2e37; background: var(--card); color: var(--fg);
+}
+.btn {
+  padding: 10px 16px; border-radius: 8px; border: 0;
+  background: var(--accent); color: #fff; cursor: pointer; font-size: 14px;
+}
+.link-btn { background: none; border: 0; color: var(--muted); cursor: pointer; }
+
+.foot { display: flex; justify-content: space-between; margin-top: 32px; color: var(--muted); font-size: 12px; }
+.status { text-align: center; color: var(--muted); font-size: 12px; min-height: 1em; }

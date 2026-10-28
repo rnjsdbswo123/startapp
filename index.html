@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Start</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <main class="page">
+    <header class="top">
+      <div id="clock" class="clock">--:--</div>
+      <div id="date" class="date"></div>
+    </header>
+
+    <form id="search" class="search" action="https://www.google.com/search" method="get">
+      <input name="q" type="search" placeholder="검색" autocomplete="off" autofocus />
+    </form>
+
+    <!-- 로그인 전 -->
+    <section id="auth" class="auth hidden">
+      <p>북마크를 모든 PC에서 같이 쓰려면 로그인하세요.</p>
+      <form id="login" class="add">
+        <input id="login-email" type="email" placeholder="이메일" required />
+        <button class="btn" type="submit">로그인 링크 받기</button>
+      </form>
+    </section>
+
+    <!-- 로그인 후 -->
+    <section id="app" class="app hidden">
+      <ul id="links" class="links"></ul>
+
+      <form id="add" class="add">
+        <input id="add-title" placeholder="이름" required />
+        <input id="add-url" placeholder="https://..." required />
+        <button class="btn" type="submit">추가</button>
+      </form>
+
+      <footer class="foot">
+        <span id="who"></span>
+        <button id="logout" class="link-btn">로그아웃</button>
+      </footer>
+    </section>
+
+    <p id="status" class="status"></p>
+  </main>
+
+  <script src="config.js"></script>
+  <script type="module" src="app.js"></script>
+</body>
+</html>
