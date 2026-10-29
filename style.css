@@ -133,7 +133,10 @@ button{font:inherit}
 /* inline edit */
 .todo-edit{display:flex;flex-direction:column;gap:6px;padding:8px 8px 10px 10px;border-radius:8px;background:var(--bg);border:1px solid var(--line-s)}
 .te-text,.memo-edit-text{box-sizing:border-box;width:100%;border:1px solid var(--line);border-radius:8px;background:var(--surface);color:var(--text);font:inherit;font-size:14px;padding:7px 10px;outline:0}
-.te-text:focus,.memo-edit-text:focus{border-color:var(--accent)}
+.te-text:focus,.memo-edit-text:focus,.te-memo:focus{border-color:var(--accent)}
+.te-memo{box-sizing:border-box;width:100%;resize:vertical;border:1px solid var(--line);border-radius:8px;background:var(--surface);color:var(--text);font:inherit;font-size:13px;line-height:1.45;padding:7px 10px;outline:0}
+.todo-memo{display:block;margin-top:3px;font-size:12px;line-height:1.4;color:var(--muted);white-space:pre-wrap;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+.done .todo-memo{color:var(--faint);text-decoration:none}
 .memo-edit-text{resize:none;line-height:1.45}
 .te-row{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
 .te-due,.te-list{height:28px;box-sizing:border-box;border:1px solid var(--line);border-radius:7px;background:var(--surface);color:var(--text);font:inherit;font-size:12px;padding:0 8px;outline:0}

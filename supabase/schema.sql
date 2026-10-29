@@ -27,6 +27,7 @@ create table if not exists public.todos (
   created_at  timestamptz not null default now()
 );
 alter table public.todos add column if not exists due date;
+alter table public.todos add column if not exists memo text;
 alter table public.todos enable row level security;
 drop policy if exists "own todos" on public.todos;
 create policy "own todos" on public.todos

@@ -117,9 +117,9 @@ if (DEMO) {
   ].filter((x) => !DEMO_ONE || x[0] === "구글").map(([group_name, title, url], i) => ({ id: "l" + i, group_name, title, url, position: i }));
   const d = (n) => { const x = new Date(); x.setDate(x.getDate() + n); return isoDate(x); };
   S.todos = [
-    ["농장ERP 입고 데이터 확인", false, "today", d(0)], ["트립팜스 예약 문의 답장", false, "today", null], ["주간 회의 자료 정리", true, "today", d(-1)],
+    ["농장ERP 입고 데이터 확인", false, "today", d(0), "입고 수량 0건 저장되는 건 확인. 담당자에게 로그 요청"], ["트립팜스 예약 문의 답장", false, "today", null], ["주간 회의 자료 정리", true, "today", d(-1)],
     ["서버 백업 스크립트 점검", false, "week", d(3)], ["분기 정산 초안", false, "week", d(20)], ["연말 결산", false, "week", d(60)], ["밀린 영수증 정리", false, "week", d(-3)],
-  ].map(([text, done, list, due], i) => ({ id: "t" + i, text, done, list, due, position: i }));
+  ].map(([text, done, list, due, memo], i) => ({ id: "t" + i, text, done, list, due, memo: memo || null, position: i }));
   S.notes = [
     ["서버 비번 바꿈. 1Password에 저장", -1], ["다음 주 화요일 거래처 미팅 10시", -1], ["ERP 입고 화면 버그: 수량 0 입력 시 저장됨 → 확인 필요", 0],
   ].map(([text, dd], i) => { const x = new Date(); x.setDate(x.getDate() + dd); x.setHours(9 + i * 3, 12 + i); return { id: "n" + i, text, created_at: x.toISOString() }; });
@@ -272,6 +272,7 @@ function todoRow(t, today) {
     return `
     <div class="todo-edit" data-edit="${t.id}">
       <input class="te-text" value="${esc(t.text)}" />
+      <textarea class="te-memo" rows="2" placeholder="메모 (선택)">${esc(t.memo || "")}</textarea>
       <div class="te-row">
         <input type="date" class="te-due" value="${t.due || ""}" title="마감일" />
         <select class="te-list"><option value="today"${t.list === "today" ? " selected" : ""}>오늘</option><option value="week"${t.list === "week" ? " selected" : ""}>이번 주</option></select>
@@ -292,7 +293,7 @@ function todoRow(t, today) {
     <div class="todo-item${t.done ? " done" : ""}${S.overId === t.id && S.dragId && S.dragId !== t.id ? " over" : ""}${S.dragId === t.id ? " dragging" : ""}"
          draggable="${!t.done}" data-id="${t.id}">
       <button type="button" class="check" data-toggle="${t.id}" aria-label="완료 전환">${t.done ? '<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>' : ""}</button>
-      <span class="todo-text" data-edit-start="${t.id}" title="클릭해서 수정">${esc(t.text)}</span>
+      <span class="todo-text" data-edit-start="${t.id}" title="클릭해서 수정">${esc(t.text)}${t.memo ? `<span class="todo-memo">${esc(t.memo)}</span>` : ""}</span>
       ${dueHtml}
       <button type="button" class="todo-del" data-del="${t.id}" aria-label="삭제">×</button>
     </div>`;
@@ -389,13 +390,15 @@ async function saveTodoEdit(id) {
   const t = S.todos.find((x) => x.id === id); if (!t) return;
   const text = box.querySelector(".te-text").value.trim(); if (!text) return;
   const due = box.querySelector(".te-due").value || null, list = box.querySelector(".te-list").value;
-  Object.assign(t, { text, due, list }); S.editId = null; renderTodos(); renderBoard();
-  const { error } = await sb.from("todos").update({ text, due, list }).eq("id", id);
+  const memo = box.querySelector(".te-memo").value.trim() || null;
+  Object.assign(t, { text, due, list, memo }); S.editId = null; renderTodos(); renderBoard();
+  const { error } = await sb.from("todos").update({ text, due, list, memo }).eq("id", id);
   if (error) { toast(error.message); loadAll(); }
 }
 function onTodoKey(e) {
   const box = e.target.closest("[data-edit]"); if (!box) return;
-  if (e.key === "Enter" && !e.isComposing && e.target.tagName !== "SELECT") { e.preventDefault(); saveTodoEdit(box.dataset.edit); }
+  const inMemo = e.target.classList.contains("te-memo");
+  if (e.key === "Enter" && !e.isComposing && e.target.tagName !== "SELECT" && (!inMemo || e.metaKey || e.ctrlKey)) { e.preventDefault(); saveTodoEdit(box.dataset.edit); }
   if (e.key === "Escape") { S.editId = null; renderTodos(); renderBoard(); }
 }
 async function onTodoClick(e) {
