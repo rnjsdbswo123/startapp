@@ -12,7 +12,7 @@ const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&
 // ---------- 상태 ----------
 const S = {
   links: [], todos: [], notes: [], tab: "today", view: "home", editing: false,
-  failed: {}, dragId: null, overId: null, session: null,
+  failed: {}, dragId: null, overId: null, session: null, editId: null, editNoteId: null,
 };
 
 // ---------- 시계 / 인사 ----------
@@ -124,7 +124,8 @@ if (DEMO) {
     ["서버 비번 바꿈. 1Password에 저장", -1], ["다음 주 화요일 거래처 미팅 10시", -1], ["ERP 입고 화면 버그: 수량 0 입력 시 저장됨 → 확인 필요", 0],
   ].map(([text, dd], i) => { const x = new Date(); x.setDate(x.getDate() + dd); x.setHours(9 + i * 3, 12 + i); return { id: "n" + i, text, created_at: x.toISOString() }; });
   $("who").textContent = "미리보기";
-  S.view = new URLSearchParams(location.search).get("view") || "home";
+  const qs = new URLSearchParams(location.search);
+  S.view = qs.get("view") || "home"; S.editId = qs.get("edit"); S.editNoteId = qs.get("editnote");
 } else {
   sb.auth.onAuthStateChange((_e, session) => onSession(session));
   sb.auth.getSession().then(({ data }) => onSession(data.session));
@@ -267,6 +268,20 @@ function dueLabel(due, today) {
   return d.getFullYear() === today.getFullYear() ? base : `${d.getFullYear()}.${base}`;
 }
 function todoRow(t, today) {
+  if (S.editId === t.id) {
+    return `
+    <div class="todo-edit" data-edit="${t.id}">
+      <input class="te-text" value="${esc(t.text)}" />
+      <div class="te-row">
+        <input type="date" class="te-due" value="${t.due || ""}" title="마감일" />
+        <select class="te-list"><option value="today"${t.list === "today" ? " selected" : ""}>오늘</option><option value="week"${t.list === "week" ? " selected" : ""}>이번 주</option></select>
+      </div>
+      <div class="te-row te-actions">
+        <button type="button" class="ghost te-cancel" data-cancel="${t.id}">취소</button>
+        <button type="button" class="btn-accent te-save" data-save="${t.id}">저장</button>
+      </div>
+    </div>`;
+  }
   let dueHtml = "";
   if (t.due) {
     const diff = Math.round((parseDue(t.due) - today) / 86400000);
@@ -277,7 +292,7 @@ function todoRow(t, today) {
     <div class="todo-item${t.done ? " done" : ""}${S.overId === t.id && S.dragId && S.dragId !== t.id ? " over" : ""}${S.dragId === t.id ? " dragging" : ""}"
          draggable="${!t.done}" data-id="${t.id}">
       <button type="button" class="check" data-toggle="${t.id}" aria-label="완료 전환">${t.done ? '<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>' : ""}</button>
-      <span class="todo-text" data-toggle="${t.id}">${esc(t.text)}</span>
+      <span class="todo-text" data-edit-start="${t.id}" title="클릭해서 수정">${esc(t.text)}</span>
       ${dueHtml}
       <button type="button" class="todo-del" data-del="${t.id}" aria-label="삭제">×</button>
     </div>`;
@@ -369,7 +384,25 @@ $("draft").addEventListener("keydown", async (e) => {
   S.todos.push(data); renderTodos(); renderBoard();
 });
 
+async function saveTodoEdit(id) {
+  const box = document.querySelector(`[data-edit="${id}"]`); if (!box) return;
+  const t = S.todos.find((x) => x.id === id); if (!t) return;
+  const text = box.querySelector(".te-text").value.trim(); if (!text) return;
+  const due = box.querySelector(".te-due").value || null, list = box.querySelector(".te-list").value;
+  Object.assign(t, { text, due, list }); S.editId = null; renderTodos(); renderBoard();
+  const { error } = await sb.from("todos").update({ text, due, list }).eq("id", id);
+  if (error) { toast(error.message); loadAll(); }
+}
+function onTodoKey(e) {
+  const box = e.target.closest("[data-edit]"); if (!box) return;
+  if (e.key === "Enter" && !e.isComposing && e.target.tagName !== "SELECT") { e.preventDefault(); saveTodoEdit(box.dataset.edit); }
+  if (e.key === "Escape") { S.editId = null; renderTodos(); renderBoard(); }
+}
 async function onTodoClick(e) {
+  const start = e.target.closest("[data-edit-start]"), save = e.target.closest("[data-save]"), cancel = e.target.closest("[data-cancel]");
+  if (start) { S.editId = start.dataset.editStart; renderTodos(); renderBoard(); const i = document.querySelector(`[data-edit="${S.editId}"] .te-text`); if (i) { i.focus(); i.select(); } return; }
+  if (save) return saveTodoEdit(save.dataset.save);
+  if (cancel) { S.editId = null; renderTodos(); renderBoard(); return; }
   const tg = e.target.closest("[data-toggle]"), del = e.target.closest("[data-del]");
   if (tg) {
     const t = S.todos.find((x) => x.id === tg.dataset.toggle); if (!t) return;
@@ -385,6 +418,8 @@ async function onTodoClick(e) {
 }
 $("todo-list").onclick = onTodoClick;
 $("board").onclick = onTodoClick;
+$("todo-list").addEventListener("keydown", onTodoKey);
+$("board").addEventListener("keydown", onTodoKey);
 
 // 드래그 정렬
 const list = $("todo-list");
@@ -431,11 +466,28 @@ function renderNotes() {
       html += `<div class="memo-day">${day === today ? "오늘" : `${d.getMonth() + 1}월 ${d.getDate()}일 ${WD[d.getDay()]}요일`}</div>`;
       lastDay = day;
     }
-    html += `<div class="memo-msg"><button type="button" class="memo-del" data-delnote="${n.id}" aria-label="삭제">×</button><div class="memo-bubble">${esc(n.text)}</div><span class="memo-time">${pad(d.getHours())}:${pad(d.getMinutes())}</span></div>`;
+    if (S.editNoteId === n.id) {
+      html += `<div class="memo-msg memo-editing" data-note-edit="${n.id}"><textarea class="memo-edit-text" rows="2">${esc(n.text)}</textarea><div class="te-row"><button type="button" class="btn-accent te-save" data-note-save="${n.id}">저장</button><button type="button" class="ghost te-cancel" data-note-cancel="${n.id}">취소</button></div></div>`;
+      continue;
+    }
+    html += `<div class="memo-msg"><button type="button" class="memo-del" data-delnote="${n.id}" aria-label="삭제">×</button><div class="memo-bubble" data-note-start="${n.id}" title="클릭해서 수정">${esc(n.text)}</div><span class="memo-time">${pad(d.getHours())}:${pad(d.getMinutes())}</span></div>`;
   }
   box.innerHTML = html;
-  box.scrollTop = box.scrollHeight;
+  if (!S.editNoteId) box.scrollTop = box.scrollHeight;
 }
+async function saveNoteEdit(id) {
+  const box = document.querySelector(`[data-note-edit="${id}"]`); if (!box) return;
+  const n = S.notes.find((x) => x.id === id); if (!n) return;
+  const text = box.querySelector(".memo-edit-text").value.trim(); if (!text) return;
+  n.text = text; S.editNoteId = null; renderNotes();
+  const { error } = await sb.from("notes").update({ text }).eq("id", id);
+  if (error) { toast(error.message); loadAll(); }
+}
+$("memo-list").addEventListener("keydown", (e) => {
+  const box = e.target.closest("[data-note-edit]"); if (!box) return;
+  if (e.key === "Enter" && !e.shiftKey && !e.isComposing) { e.preventDefault(); saveNoteEdit(box.dataset.noteEdit); }
+  if (e.key === "Escape") { S.editNoteId = null; renderNotes(); }
+});
 
 $("memo-form").onsubmit = async (e) => {
   e.preventDefault();
@@ -450,6 +502,10 @@ $("memo-input").addEventListener("keydown", (e) => {
 });
 $("memo-input").addEventListener("input", (e) => { e.target.style.height = ""; e.target.style.height = Math.min(e.target.scrollHeight, 120) + "px"; });
 $("memo-list").onclick = async (e) => {
+  const st = e.target.closest("[data-note-start]"), sv = e.target.closest("[data-note-save]"), cc = e.target.closest("[data-note-cancel]");
+  if (st) { S.editNoteId = st.dataset.noteStart; renderNotes(); const ta = document.querySelector(`[data-note-edit="${S.editNoteId}"] textarea`); if (ta) { ta.focus(); ta.setSelectionRange(ta.value.length, ta.value.length); } return; }
+  if (sv) return saveNoteEdit(sv.dataset.noteSave);
+  if (cc) { S.editNoteId = null; renderNotes(); return; }
   const b = e.target.closest("[data-delnote]"); if (!b) return;
   const id = b.dataset.delnote;
   S.notes = S.notes.filter((n) => n.id !== id); renderNotes();
