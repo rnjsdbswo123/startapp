@@ -43,3 +43,11 @@ GitHub 저장소 → Settings → Pages → Branch: `main` / `(root)` 저장.
 | `app.js` | 이메일 매직링크 로그인, 북마크 CRUD, 실시간 동기화 |
 | `config.js` | Supabase URL / anon key |
 | `supabase/schema.sql` | 테이블 + RLS 정책 |
+
+## DB 스키마 적용 (psql)
+
+프로젝트는 싱가포르 리전(ap-southeast-1). 직접 연결 호스트는 IPv6 전용이라 IPv4 네트워크에서는 세션 풀러로 접속:
+
+```bash
+PGPASSWORD='<DB 비밀번호>' psql "host=aws-0-ap-southeast-1.pooler.supabase.com port=5432 dbname=postgres user=postgres.vgkrgisbkwtxnodzcfiv sslmode=require" -f supabase/schema.sql
+```
