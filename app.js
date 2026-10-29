@@ -160,8 +160,9 @@ function stopRealtime() { if (channel) { sb.removeChannel(channel); channel = nu
 function groupsOf(links) {
   const map = new Map();
   for (const l of links) {
-    if (!map.has(l.group_name)) map.set(l.group_name, []);
-    map.get(l.group_name).push(l);
+    const g = l.group_name || "기타";
+    if (!map.has(g)) map.set(g, []);
+    map.get(g).push(l);
   }
   return [...map].map(([name, links]) => ({ name, links }));
 }
@@ -175,7 +176,7 @@ function renderGroups() {
   } else {
     box.innerHTML = groups.map((g) => `
       <div class="group">
-        <div class="group-head"><span class="group-name">${esc(g.name)}</span><span class="group-count">${g.links.length}</span></div>
+        <div class="group-head"><span class="group-name">${esc(g.name)}</span>${S.editing ? `<button type="button" class="group-del" data-delgroup="${esc(g.name)}" title="그룹 삭제">그룹 삭제</button>` : `<span class="group-count">${g.links.length}</span>`}</div>
         <div class="group-links">${g.links.map(linkRow).join("")}</div>
       </div>`).join("");
   }
@@ -202,6 +203,16 @@ $("groups").addEventListener("error", (e) => {
 }, true);
 
 $("groups").onclick = async (e) => {
+  const gbtn = e.target.closest("[data-delgroup]");
+  if (gbtn) {
+    const name = gbtn.dataset.delgroup;
+    const ids = S.links.filter((l) => (l.group_name || "기타") === name).map((l) => l.id);
+    if (!confirm(`"${name}" 그룹의 링크 ${ids.length}개를 모두 삭제할까요?`)) return;
+    S.links = S.links.filter((l) => !ids.includes(l.id)); renderGroups();
+    const { error } = await sb.from("links").delete().in("id", ids);
+    if (error) { toast(error.message); loadAll(); }
+    return;
+  }
   const btn = e.target.closest("[data-del]"); if (!btn) return;
   const id = btn.dataset.del;
   S.links = S.links.filter((l) => l.id !== id); renderGroups();

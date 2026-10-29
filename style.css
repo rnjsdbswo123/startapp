@@ -44,6 +44,8 @@ button{font:inherit}
 .group-head{display:flex;justify-content:space-between;align-items:baseline;padding:0 8px 10px}
 .group-name{font-size:13px;font-weight:600;color:var(--muted);letter-spacing:.02em}
 .group-count{font-size:12px;color:var(--faint);font-variant-numeric:tabular-nums}
+.group-del{border:0;background:transparent;color:var(--faint);font-size:11px;cursor:pointer;padding:2px 6px;border-radius:6px}
+.group-del:hover{color:#e5726a;background:rgba(229,114,106,.12)}
 .group-links{display:flex;flex-direction:column;gap:1px}
 .link-row{display:flex;align-items:center;gap:4px}
 .link{flex:1;min-width:0;display:flex;align-items:center;gap:11px;padding:8px;border-radius:8px;font-size:14.5px;color:var(--text);transition:background .12s}
