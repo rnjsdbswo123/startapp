@@ -13,6 +13,7 @@ a{color:inherit;text-decoration:none}
 *::-webkit-scrollbar-thumb{background:var(--line-s);border-radius:8px;border:2px solid transparent;background-clip:padding-box}
 button{font:inherit}
 .hidden{display:none !important}
+.invisible{visibility:hidden}
 
 .page{height:100vh;box-sizing:border-box;display:flex;flex-direction:column;padding:28px 40px 14px}
 .wrap{width:100%;max-width:1240px;margin:0 auto;flex:1;min-height:0;display:flex;flex-direction:column}
@@ -71,15 +72,39 @@ button{font:inherit}
 .todo-add input{flex:1;min-width:0;border:0;outline:0;background:transparent;color:var(--text);font:inherit;font-size:14px}
 .todo-add input[type=date]{flex:none;width:auto;font-size:12px;color:var(--muted);padding:0;cursor:pointer}
 .todo-add input[type=date]:valid{color:var(--accent)}
-.main.plan{grid-template-columns:minmax(0,1fr) 420px}
-.tl-head{padding:10px 10px 4px;font-size:11px;font-weight:600;letter-spacing:.04em;color:var(--faint);text-transform:uppercase}
-.tl-head.overdue{color:#e5726a}
 .due{flex:none;font-size:11px;color:var(--faint);font-variant-numeric:tabular-nums;margin-top:3px;white-space:nowrap}
 .due.overdue{color:#e5726a}
 .due.today{color:var(--accent)}
+/* view tabs */
+.views{display:flex;gap:4px;padding:3px;border-radius:9px;background:var(--surface);border:1px solid var(--line);align-self:flex-end;margin-bottom:4px}
+.views button{height:28px;padding:0 14px;border:0;border-radius:7px;font-size:13px;cursor:pointer;background:transparent;color:var(--muted)}
+.views button.active{background:var(--accent-soft);color:var(--text);font-weight:600}
+
+/* plan page */
+.board-wrap{min-height:0;display:flex;flex-direction:column;gap:14px}
+.plan-add{display:flex;align-items:center;gap:10px;height:44px;padding:0 10px 0 14px;border:1px solid var(--line);border-radius:12px;background:var(--surface)}
+.plan-add .plus{color:var(--accent);font-size:18px;line-height:1;flex:none}
+.plan-add input{min-width:0;border:0;outline:0;background:transparent;color:var(--text);font:inherit;font-size:14px}
+#plan-text{flex:1}
+#plan-due{flex:none;font-size:13px;color:var(--muted);cursor:pointer}
+#plan-due:valid{color:var(--accent)}
+.plan-add .btn-accent{height:30px}
+.board{flex:1;min-height:0;overflow:auto;display:grid;grid-template-columns:repeat(auto-fill,minmax(270px,1fr));gap:14px;align-content:start}
+.col{display:flex;flex-direction:column;padding:14px 8px 8px;border:1px solid var(--line);border-radius:14px;background:var(--surface);min-width:0;max-height:100%}
+.col-head{display:flex;justify-content:space-between;align-items:baseline;padding:0 10px 10px}
+.col-name{font-size:13px;font-weight:600;color:var(--muted);letter-spacing:.02em}
+.col.overdue .col-name{color:#e5726a}
+.col.today .col-name{color:var(--accent)}
+.col-count{font-size:12px;color:var(--faint);font-variant-numeric:tabular-nums}
+.col-list{overflow-y:auto;min-height:0}
+.col .todo-item{cursor:default;flex-wrap:wrap}
+.col .todo-text{flex:1 1 auto}
+.col .due{flex:0 0 100%;margin:0 0 0 28px;order:5}
+.col .todo-del{order:3}
+.board-empty{grid-column:1/-1;padding:40px 10px;text-align:center;font-size:13px;color:var(--faint)}
+
 /* memo */
-.memo{flex:1;min-height:0;display:flex;flex-direction:column;border-top:1px solid var(--line)}
-.memo-head{padding:12px 18px 8px;font-size:13px;font-weight:600;color:var(--muted)}
+.memo{min-height:0;display:flex;flex-direction:column;border:1px solid var(--line);border-radius:14px;background:var(--surface);overflow:hidden}
 .memo-list{flex:1;min-height:0;overflow-y:auto;padding:0 14px 10px;display:flex;flex-direction:column;gap:6px}
 .memo-day{align-self:center;font-size:11px;color:var(--faint);padding:6px 0 2px}
 .memo-msg{align-self:flex-end;max-width:85%;display:flex;flex-direction:column;align-items:flex-end;gap:2px;position:relative}
@@ -140,7 +165,9 @@ button{font:inherit}
 .status.show{opacity:1}
 
 @media (max-width:900px){
-  .main.plan{grid-template-columns:1fr}
+  .top{flex-wrap:wrap}
+  .board{overflow:visible}
+  .memo{min-height:420px}
   .page{height:auto;min-height:100vh;padding:20px 16px 14px}
   .main{grid-template-columns:1fr}
   .groups{overflow:visible}

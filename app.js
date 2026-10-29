@@ -11,7 +11,7 @@ const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&
 
 // ---------- 상태 ----------
 const S = {
-  links: [], todos: [], notes: [], tab: "today", editing: false,
+  links: [], todos: [], notes: [], tab: "today", view: "home", editing: false,
   failed: {}, dragId: null, overId: null, session: null,
 };
 
@@ -124,7 +124,7 @@ if (DEMO) {
     ["서버 비번 바꿈. 1Password에 저장", -1], ["다음 주 화요일 거래처 미팅 10시", -1], ["ERP 입고 화면 버그: 수량 0 입력 시 저장됨 → 확인 필요", 0],
   ].map(([text, dd], i) => { const x = new Date(); x.setDate(x.getDate() + dd); x.setHours(9 + i * 3, 12 + i); return { id: "n" + i, text, created_at: x.toISOString() }; });
   $("who").textContent = "미리보기";
-  S.tab = new URLSearchParams(location.search).get("tab") || "today";
+  S.view = new URLSearchParams(location.search).get("view") || "home";
 } else {
   sb.auth.onAuthStateChange((_e, session) => onSession(session));
   sb.auth.getSession().then(({ data }) => onSession(data.session));
@@ -249,7 +249,7 @@ $("add-link").onsubmit = async (e) => {
 
 $("edit-toggle").onclick = () => {
   S.editing = !S.editing;
-  $("add-link").classList.toggle("hidden", !S.editing);
+  $("add-link").classList.toggle("hidden", !(S.editing && S.view === "home"));
   $("edit-toggle").querySelector(".edit-icon").textContent = S.editing ? "✓" : "+";
   $("edit-toggle").querySelector(".edit-label").textContent = S.editing ? "편집 완료" : "즐겨찾기 편집";
   renderGroups();
@@ -275,7 +275,7 @@ function todoRow(t, today) {
   }
   return `
     <div class="todo-item${t.done ? " done" : ""}${S.overId === t.id && S.dragId && S.dragId !== t.id ? " over" : ""}${S.dragId === t.id ? " dragging" : ""}"
-         draggable="${!t.done && S.tab !== "plan"}" data-id="${t.id}">
+         draggable="${!t.done}" data-id="${t.id}">
       <button type="button" class="check" data-toggle="${t.id}" aria-label="완료 전환">${t.done ? '<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>' : ""}</button>
       <span class="todo-text" data-toggle="${t.id}">${esc(t.text)}</span>
       ${dueHtml}
@@ -286,46 +286,70 @@ function todoRow(t, today) {
 function renderTodos() {
   const now = new Date(), today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
   for (const b of $("tabs").querySelectorAll("button")) {
-    const k = b.dataset.tab;
-    const left = k === "plan" ? S.todos.filter((t) => t.due && !t.done).length : S.todos.filter((t) => t.list === k && !t.done).length;
+    const k = b.dataset.tab, left = S.todos.filter((t) => t.list === k && !t.done).length;
     b.classList.toggle("active", k === S.tab);
     b.querySelector(".tab-left").textContent = left || "";
   }
-  const plan = S.tab === "plan";
-  document.querySelector(".main").classList.toggle("plan", plan);
-  $("memo").classList.toggle("hidden", !plan);
-  const list = $("todo-list");
+  const inTab = S.todos.filter((t) => t.list === S.tab);
+  const sorted = [...inTab.filter((t) => !t.done), ...inTab.filter((t) => t.done)];
+  $("todo-count").textContent = `완료 ${inTab.filter((t) => t.done).length}/${inTab.length}`;
+  $("todo-list").innerHTML = sorted.length ? sorted.map((t) => todoRow(t, today)).join("") : `<div class="todo-empty">비어 있어요</div>`;
+}
 
-  if (!plan) {
-    const inTab = S.todos.filter((t) => t.list === S.tab);
-    const sorted = [...inTab.filter((t) => !t.done), ...inTab.filter((t) => t.done)];
-    $("todo-count").textContent = `완료 ${inTab.filter((t) => t.done).length}/${inTab.length}`;
-    list.innerHTML = sorted.length ? sorted.map((t) => todoRow(t, today)).join("") : `<div class="todo-empty">비어 있어요</div>`;
-    return;
-  }
-
-  // 일정 탭: 마감일 기준 타임라인
+// 일정 화면: 마감일 기준 타임테이블
+function renderBoard() {
+  const now = new Date(), today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
   const dated = S.todos.filter((t) => t.due).sort((a, b) => a.due.localeCompare(b.due) || a.position - b.position);
   const undated = S.todos.filter((t) => !t.due && !t.done);
-  $("todo-count").textContent = `완료 ${dated.filter((t) => t.done).length}/${dated.length}`;
   const dow = (today.getDay() + 6) % 7;                       // 월=0
   const weekEnd = new Date(today); weekEnd.setDate(today.getDate() + (6 - dow));
   // 구간이 겹치지 않도록 각 경계는 앞 경계보다 뒤에 오게
   const monthEnd = new Date(Math.max(weekEnd, new Date(today.getFullYear(), today.getMonth() + 1, 0)));
   const yearEnd = new Date(Math.max(monthEnd, new Date(today.getFullYear(), 11, 31)));
   const sections = [
-    ["지난 일정", (d) => d < today, "overdue"], ["오늘", (d) => +d === +today], ["이번 주", (d) => d > today && d <= weekEnd],
+    ["지난 일정", (d) => d < today, "overdue"], ["오늘", (d) => +d === +today, "today"], ["이번 주", (d) => d > today && d <= weekEnd],
     ["이번 달", (d) => d > weekEnd && d <= monthEnd], ["올해", (d) => d > monthEnd && d <= yearEnd], ["이후", (d) => d > yearEnd],
   ];
   let html = "";
   for (const [name, test, cls] of sections) {
     const items = dated.filter((t) => test(parseDue(t.due)) && !(cls === "overdue" && t.done));
     if (!items.length) continue;
-    html += `<div class="tl-head${cls ? " " + cls : ""}">${name}</div>` + items.map((t) => todoRow(t, today)).join("");
+    html += `<div class="col${cls ? " " + cls : ""}"><div class="col-head"><span class="col-name">${name}</span><span class="col-count">${items.filter((t) => !t.done).length}</span></div><div class="col-list">${items.map((t) => todoRow(t, today)).join("")}</div></div>`;
   }
-  if (undated.length) html += `<div class="tl-head">날짜 없음</div>` + undated.map((t) => todoRow(t, today)).join("");
-  list.innerHTML = html || `<div class="todo-empty">마감일이 있는 할 일이 여기에 모여요</div>`;
+  if (undated.length) html += `<div class="col"><div class="col-head"><span class="col-name">날짜 없음</span><span class="col-count">${undated.length}</span></div><div class="col-list">${undated.map((t) => todoRow(t, today)).join("")}</div></div>`;
+  $("board").innerHTML = html || `<div class="board-empty">${S.session ? "할 일을 추가하면 마감일별로 여기에 정리돼요" : ""}</div>`;
 }
+
+// 뷰 전환 (홈 / 일정)
+function renderView() {
+  $("view-home").classList.toggle("hidden", S.view !== "home");
+  $("view-plan").classList.toggle("hidden", S.view !== "plan");
+  $("add-link").classList.toggle("hidden", !(S.editing && S.view === "home"));
+  $("edit-toggle").classList.toggle("invisible", S.view !== "home");
+  for (const b of $("views").querySelectorAll("button")) b.classList.toggle("active", b.dataset.view === S.view);
+}
+$("views").onclick = (e) => {
+  const b = e.target.closest("[data-view]"); if (!b) return;
+  S.view = b.dataset.view;
+  try { localStorage.setItem("sp.view", S.view); } catch {}
+  renderView();
+  if (S.view === "plan") $("memo-list").scrollTop = $("memo-list").scrollHeight;
+};
+if (!DEMO) { try { S.view = localStorage.getItem("sp.view") || "home"; } catch {} }
+
+// 일정 화면에서 추가
+$("plan-add").onsubmit = async (e) => {
+  e.preventDefault();
+  const text = $("plan-text").value.trim(); if (!text) return;
+  const due = $("plan-due").value || null;
+  const list = due && due === isoDate(new Date()) ? "today" : "week";
+  const position = S.todos.length ? Math.max(...S.todos.map((t) => t.position)) + 1 : 0;
+  $("plan-text").value = ""; $("plan-due").value = "";
+  const { data, error } = await sb.from("todos").insert({ text, list, done: false, position, due }).select().single();
+  if (error) return toast(error.message);
+  S.todos.push(data); renderTodos(); renderBoard();
+  $("plan-text").focus();
+};
 
 $("tabs").onclick = (e) => {
   const b = e.target.closest("[data-tab]"); if (!b) return;
@@ -338,27 +362,29 @@ $("draft").addEventListener("keydown", async (e) => {
   const text = $("draft").value.trim(); if (!text) return;
   const position = S.todos.length ? Math.max(...S.todos.map((t) => t.position)) + 1 : 0;
   const due = $("due").value || null;
-  const list = S.tab === "plan" ? "week" : S.tab;
+  const list = S.tab;
   $("draft").value = ""; $("due").value = "";
   const { data, error } = await sb.from("todos").insert({ text, list, done: false, position, due }).select().single();
   if (error) return toast(error.message);
-  S.todos.push(data); renderTodos();
+  S.todos.push(data); renderTodos(); renderBoard();
 });
 
-$("todo-list").onclick = async (e) => {
+async function onTodoClick(e) {
   const tg = e.target.closest("[data-toggle]"), del = e.target.closest("[data-del]");
   if (tg) {
     const t = S.todos.find((x) => x.id === tg.dataset.toggle); if (!t) return;
-    t.done = !t.done; renderTodos();
+    t.done = !t.done; renderTodos(); renderBoard();
     const { error } = await sb.from("todos").update({ done: t.done }).eq("id", t.id);
     if (error) { toast(error.message); loadAll(); }
   } else if (del) {
     const id = del.dataset.del;
-    S.todos = S.todos.filter((x) => x.id !== id); renderTodos();
+    S.todos = S.todos.filter((x) => x.id !== id); renderTodos(); renderBoard();
     const { error } = await sb.from("todos").delete().eq("id", id);
     if (error) { toast(error.message); loadAll(); }
   }
-};
+}
+$("todo-list").onclick = onTodoClick;
+$("board").onclick = onTodoClick;
 
 // 드래그 정렬
 const list = $("todo-list");
@@ -395,6 +421,7 @@ list.addEventListener("dragend", () => { S.dragId = null; S.overId = null; rende
 // ---------- 메모 (나와의 채팅) ----------
 function renderNotes() {
   const box = $("memo-list");
+  $("memo-count").textContent = S.notes.length ? `${S.notes.length}개` : "";
   if (!S.notes.length) { box.innerHTML = `<div class="memo-empty">첫 메모를 남겨보세요</div>`; return; }
   const today = isoDate(new Date());
   let lastDay = "", html = "";
@@ -431,7 +458,7 @@ $("memo-list").onclick = async (e) => {
 };
 
 // ---------- 공통 ----------
-function render() { renderGroups(); renderTodos(); renderNotes(); }
+function render() { renderView(); renderGroups(); renderTodos(); renderBoard(); renderNotes(); }
 let toastTimer;
 function toast(msg) {
   const el = $("status"); el.textContent = msg; el.classList.add("show");
