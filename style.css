@@ -1,7 +1,7 @@
-:root{--bg:#0d1012;--bg2:#12171a;--surface:#151a1d;--surface-h:#1a2024;--line:rgba(255,255,255,.07);--line-s:rgba(255,255,255,.14);--text:#e6e9eb;--muted:#8a9399;--faint:#566066;--accent:#4cc3bd;--accent-soft:rgba(76,195,189,.13);--on-accent:#062120}
+:root{color-scheme:dark;--bg:#0d1012;--bg2:#12171a;--surface:#151a1d;--surface-h:#1a2024;--line:rgba(255,255,255,.07);--line-s:rgba(255,255,255,.14);--text:#e6e9eb;--muted:#8a9399;--faint:#566066;--accent:#4cc3bd;--accent-soft:rgba(76,195,189,.13);--on-accent:#062120}
 [data-accent="바다"]{--accent:#58aee0;--accent-soft:rgba(88,174,224,.13);--on-accent:#06182a}
 [data-accent="에메랄드"]{--accent:#4cc694;--accent-soft:rgba(76,198,148,.13);--on-accent:#06201a}
-[data-theme="light"]{--bg:#f3f4f4;--bg2:#f8f9f9;--surface:#ffffff;--surface-h:#f7f9f9;--line:#e3e6e7;--line-s:#cdd3d5;--text:#1a1f22;--muted:#69737a;--faint:#9aa3a8;--accent:#0b8a85;--accent-soft:rgba(11,138,133,.09);--on-accent:#ffffff}
+[data-theme="light"]{color-scheme:light;--bg:#f3f4f4;--bg2:#f8f9f9;--surface:#ffffff;--surface-h:#f7f9f9;--line:#e3e6e7;--line-s:#cdd3d5;--text:#1a1f22;--muted:#69737a;--faint:#9aa3a8;--accent:#0b8a85;--accent-soft:rgba(11,138,133,.09);--on-accent:#ffffff}
 [data-theme="light"][data-accent="바다"]{--accent:#1d79ad;--accent-soft:rgba(29,121,173,.09)}
 [data-theme="light"][data-accent="에메랄드"]{--accent:#168a5b;--accent-soft:rgba(22,138,91,.09)}
 
@@ -69,6 +69,29 @@ button{font:inherit}
 .todo-add{margin:12px 14px 6px;display:flex;align-items:center;gap:10px;height:40px;padding:0 12px;border:1px solid var(--line);border-radius:10px}
 .todo-add .plus{color:var(--accent);font-size:18px;line-height:1;flex:none}
 .todo-add input{flex:1;min-width:0;border:0;outline:0;background:transparent;color:var(--text);font:inherit;font-size:14px}
+.todo-add input[type=date]{flex:none;width:auto;font-size:12px;color:var(--muted);padding:0;cursor:pointer}
+.todo-add input[type=date]:valid{color:var(--accent)}
+.main.plan{grid-template-columns:minmax(0,1fr) 420px}
+.tl-head{padding:10px 10px 4px;font-size:11px;font-weight:600;letter-spacing:.04em;color:var(--faint);text-transform:uppercase}
+.tl-head.overdue{color:#e5726a}
+.due{flex:none;font-size:11px;color:var(--faint);font-variant-numeric:tabular-nums;margin-top:3px;white-space:nowrap}
+.due.overdue{color:#e5726a}
+.due.today{color:var(--accent)}
+/* memo */
+.memo{flex:1;min-height:0;display:flex;flex-direction:column;border-top:1px solid var(--line)}
+.memo-head{padding:12px 18px 8px;font-size:13px;font-weight:600;color:var(--muted)}
+.memo-list{flex:1;min-height:0;overflow-y:auto;padding:0 14px 10px;display:flex;flex-direction:column;gap:6px}
+.memo-day{align-self:center;font-size:11px;color:var(--faint);padding:6px 0 2px}
+.memo-msg{align-self:flex-end;max-width:85%;display:flex;flex-direction:column;align-items:flex-end;gap:2px;position:relative}
+.memo-bubble{background:var(--accent-soft);color:var(--text);border:1px solid transparent;border-radius:12px 12px 3px 12px;padding:7px 11px;font-size:13.5px;line-height:1.5;white-space:pre-wrap;overflow-wrap:anywhere}
+.memo-time{font-size:10.5px;color:var(--faint)}
+.memo-del{position:absolute;left:-22px;top:4px;width:18px;height:18px;border:0;padding:0;background:transparent;color:var(--faint);cursor:pointer;font-size:15px;line-height:1;opacity:0}
+.memo-msg:hover .memo-del{opacity:1}
+.memo-empty{padding:20px 10px;text-align:center;font-size:12px;color:var(--faint)}
+.memo-form{display:flex;gap:8px;align-items:flex-end;padding:8px 14px 14px}
+.memo-form textarea{flex:1;min-width:0;max-height:120px;resize:none;box-sizing:border-box;border:1px solid var(--line);border-radius:10px;background:var(--bg);color:var(--text);font:inherit;font-size:13.5px;line-height:1.45;padding:9px 12px;outline:0}
+.memo-form textarea:focus{border-color:var(--accent)}
+.memo-form .btn-accent{height:38px}
 .todo-list{flex:1;min-height:0;overflow-y:auto;padding:4px 8px 12px}
 .todo-item{display:flex;align-items:flex-start;gap:11px;padding:8px 8px 8px 10px;border-radius:8px;cursor:grab}
 .todo-item:hover{background:var(--surface-h)}
@@ -117,6 +140,7 @@ button{font:inherit}
 .status.show{opacity:1}
 
 @media (max-width:900px){
+  .main.plan{grid-template-columns:1fr}
   .page{height:auto;min-height:100vh;padding:20px 16px 14px}
   .main{grid-template-columns:1fr}
   .groups{overflow:visible}

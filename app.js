@@ -11,7 +11,7 @@ const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&
 
 // ---------- 상태 ----------
 const S = {
-  links: [], todos: [], tab: "today", editing: false,
+  links: [], todos: [], notes: [], tab: "today", editing: false,
   failed: {}, dragId: null, overId: null, session: null,
 };
 
@@ -115,10 +115,16 @@ if (DEMO) {
     ["개발", "GitHub", "https://github.com"], ["개발", "Claude", "https://claude.ai"],
     ["일상", "유튜브", "https://www.youtube.com"], ["일상", "네이버", "https://www.naver.com"],
   ].filter((x) => !DEMO_ONE || x[0] === "구글").map(([group_name, title, url], i) => ({ id: "l" + i, group_name, title, url, position: i }));
+  const d = (n) => { const x = new Date(); x.setDate(x.getDate() + n); return isoDate(x); };
   S.todos = [
-    ["농장ERP 입고 데이터 확인", false, "today"], ["트립팜스 예약 문의 답장", false, "today"], ["주간 회의 자료 정리", true, "today"], ["서버 백업 스크립트 점검", false, "week"],
-  ].map(([text, done, list], i) => ({ id: "t" + i, text, done, list, position: i }));
+    ["농장ERP 입고 데이터 확인", false, "today", d(0)], ["트립팜스 예약 문의 답장", false, "today", null], ["주간 회의 자료 정리", true, "today", d(-1)],
+    ["서버 백업 스크립트 점검", false, "week", d(3)], ["분기 정산 초안", false, "week", d(20)], ["연말 결산", false, "week", d(60)], ["밀린 영수증 정리", false, "week", d(-3)],
+  ].map(([text, done, list, due], i) => ({ id: "t" + i, text, done, list, due, position: i }));
+  S.notes = [
+    ["서버 비번 바꿈. 1Password에 저장", -1], ["다음 주 화요일 거래처 미팅 10시", -1], ["ERP 입고 화면 버그: 수량 0 입력 시 저장됨 → 확인 필요", 0],
+  ].map(([text, dd], i) => { const x = new Date(); x.setDate(x.getDate() + dd); x.setHours(9 + i * 3, 12 + i); return { id: "n" + i, text, created_at: x.toISOString() }; });
   $("who").textContent = "미리보기";
+  S.tab = new URLSearchParams(location.search).get("tab") || "today";
 } else {
   sb.auth.onAuthStateChange((_e, session) => onSession(session));
   sb.auth.getSession().then(({ data }) => onSession(data.session));
@@ -130,19 +136,21 @@ async function onSession(session) {
   $("logout").classList.toggle("hidden", !session);
   $("set-pw").classList.toggle("hidden", !session);
   $("who").textContent = session ? session.user.email : "";
-  if (!session) { S.links = []; S.todos = []; stopRealtime(); render(); return; }
+  if (!session) { S.links = []; S.todos = []; S.notes = []; stopRealtime(); render(); return; }
   await loadAll();
   startRealtime();
 }
 
 // ---------- 데이터 ----------
 async function loadAll() {
-  const [l, t] = await Promise.all([
+  const [l, t, n] = await Promise.all([
     sb.from("links").select("*").order("position").order("created_at"),
     sb.from("todos").select("*").order("position").order("created_at"),
+    sb.from("notes").select("*").order("created_at"),
   ]);
   if (l.error) toast(l.error.message); else S.links = l.data;
   if (t.error) toast(t.error.message); else S.todos = t.data;
+  if (n.error) toast(n.error.message); else S.notes = n.data;
   render();
 }
 
@@ -152,6 +160,7 @@ function startRealtime() {
   channel = sb.channel("sync")
     .on("postgres_changes", { event: "*", schema: "public", table: "links" }, loadAll)
     .on("postgres_changes", { event: "*", schema: "public", table: "todos" }, loadAll)
+    .on("postgres_changes", { event: "*", schema: "public", table: "notes" }, loadAll)
     .subscribe();
 }
 function stopRealtime() { if (channel) { sb.removeChannel(channel); channel = null; } }
@@ -247,24 +256,75 @@ $("edit-toggle").onclick = () => {
 };
 
 // ---------- 할 일 ----------
+function isoDate(d) { return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`; }
+function parseDue(str) { const [y, m, d] = str.split("-").map(Number); return new Date(y, m - 1, d); }
+function dueLabel(due, today) {
+  const d = parseDue(due);
+  const diff = Math.round((d - today) / 86400000);
+  if (diff === 0) return "오늘";
+  if (diff === 1) return "내일";
+  const base = `${d.getMonth() + 1}/${d.getDate()} (${WD[d.getDay()]})`;
+  return d.getFullYear() === today.getFullYear() ? base : `${d.getFullYear()}.${base}`;
+}
+function todoRow(t, today) {
+  let dueHtml = "";
+  if (t.due) {
+    const diff = Math.round((parseDue(t.due) - today) / 86400000);
+    const cls = t.done ? "" : diff < 0 ? " overdue" : diff === 0 ? " today" : "";
+    dueHtml = `<span class="due${cls}">${dueLabel(t.due, today)}</span>`;
+  }
+  return `
+    <div class="todo-item${t.done ? " done" : ""}${S.overId === t.id && S.dragId && S.dragId !== t.id ? " over" : ""}${S.dragId === t.id ? " dragging" : ""}"
+         draggable="${!t.done && S.tab !== "plan"}" data-id="${t.id}">
+      <button type="button" class="check" data-toggle="${t.id}" aria-label="완료 전환">${t.done ? '<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>' : ""}</button>
+      <span class="todo-text" data-toggle="${t.id}">${esc(t.text)}</span>
+      ${dueHtml}
+      <button type="button" class="todo-del" data-del="${t.id}" aria-label="삭제">×</button>
+    </div>`;
+}
+
 function renderTodos() {
-  const inTab = S.todos.filter((t) => t.list === S.tab);
-  const sorted = [...inTab.filter((t) => !t.done), ...inTab.filter((t) => t.done)];
-  $("todo-count").textContent = `완료 ${inTab.filter((t) => t.done).length}/${inTab.length}`;
+  const now = new Date(), today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
   for (const b of $("tabs").querySelectorAll("button")) {
-    const k = b.dataset.tab, left = S.todos.filter((t) => t.list === k && !t.done).length;
+    const k = b.dataset.tab;
+    const left = k === "plan" ? S.todos.filter((t) => t.due && !t.done).length : S.todos.filter((t) => t.list === k && !t.done).length;
     b.classList.toggle("active", k === S.tab);
     b.querySelector(".tab-left").textContent = left || "";
   }
+  const plan = S.tab === "plan";
+  document.querySelector(".main").classList.toggle("plan", plan);
+  $("memo").classList.toggle("hidden", !plan);
   const list = $("todo-list");
-  if (!sorted.length) { list.innerHTML = `<div class="todo-empty">비어 있어요</div>`; return; }
-  list.innerHTML = sorted.map((t) => `
-    <div class="todo-item${t.done ? " done" : ""}${S.overId === t.id && S.dragId && S.dragId !== t.id ? " over" : ""}${S.dragId === t.id ? " dragging" : ""}"
-         draggable="${!t.done}" data-id="${t.id}">
-      <button type="button" class="check" data-toggle="${t.id}" aria-label="완료 전환">${t.done ? '<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>' : ""}</button>
-      <span class="todo-text" data-toggle="${t.id}">${esc(t.text)}</span>
-      <button type="button" class="todo-del" data-del="${t.id}" aria-label="삭제">×</button>
-    </div>`).join("");
+
+  if (!plan) {
+    const inTab = S.todos.filter((t) => t.list === S.tab);
+    const sorted = [...inTab.filter((t) => !t.done), ...inTab.filter((t) => t.done)];
+    $("todo-count").textContent = `완료 ${inTab.filter((t) => t.done).length}/${inTab.length}`;
+    list.innerHTML = sorted.length ? sorted.map((t) => todoRow(t, today)).join("") : `<div class="todo-empty">비어 있어요</div>`;
+    return;
+  }
+
+  // 일정 탭: 마감일 기준 타임라인
+  const dated = S.todos.filter((t) => t.due).sort((a, b) => a.due.localeCompare(b.due) || a.position - b.position);
+  const undated = S.todos.filter((t) => !t.due && !t.done);
+  $("todo-count").textContent = `완료 ${dated.filter((t) => t.done).length}/${dated.length}`;
+  const dow = (today.getDay() + 6) % 7;                       // 월=0
+  const weekEnd = new Date(today); weekEnd.setDate(today.getDate() + (6 - dow));
+  // 구간이 겹치지 않도록 각 경계는 앞 경계보다 뒤에 오게
+  const monthEnd = new Date(Math.max(weekEnd, new Date(today.getFullYear(), today.getMonth() + 1, 0)));
+  const yearEnd = new Date(Math.max(monthEnd, new Date(today.getFullYear(), 11, 31)));
+  const sections = [
+    ["지난 일정", (d) => d < today, "overdue"], ["오늘", (d) => +d === +today], ["이번 주", (d) => d > today && d <= weekEnd],
+    ["이번 달", (d) => d > weekEnd && d <= monthEnd], ["올해", (d) => d > monthEnd && d <= yearEnd], ["이후", (d) => d > yearEnd],
+  ];
+  let html = "";
+  for (const [name, test, cls] of sections) {
+    const items = dated.filter((t) => test(parseDue(t.due)) && !(cls === "overdue" && t.done));
+    if (!items.length) continue;
+    html += `<div class="tl-head${cls ? " " + cls : ""}">${name}</div>` + items.map((t) => todoRow(t, today)).join("");
+  }
+  if (undated.length) html += `<div class="tl-head">날짜 없음</div>` + undated.map((t) => todoRow(t, today)).join("");
+  list.innerHTML = html || `<div class="todo-empty">마감일이 있는 할 일이 여기에 모여요</div>`;
 }
 
 $("tabs").onclick = (e) => {
@@ -277,8 +337,10 @@ $("draft").addEventListener("keydown", async (e) => {
   e.preventDefault();
   const text = $("draft").value.trim(); if (!text) return;
   const position = S.todos.length ? Math.max(...S.todos.map((t) => t.position)) + 1 : 0;
-  $("draft").value = "";
-  const { data, error } = await sb.from("todos").insert({ text, list: S.tab, done: false, position }).select().single();
+  const due = $("due").value || null;
+  const list = S.tab === "plan" ? "week" : S.tab;
+  $("draft").value = ""; $("due").value = "";
+  const { data, error } = await sb.from("todos").insert({ text, list, done: false, position, due }).select().single();
   if (error) return toast(error.message);
   S.todos.push(data); renderTodos();
 });
@@ -330,8 +392,46 @@ list.addEventListener("drop", async (e) => {
 });
 list.addEventListener("dragend", () => { S.dragId = null; S.overId = null; renderTodos(); });
 
+// ---------- 메모 (나와의 채팅) ----------
+function renderNotes() {
+  const box = $("memo-list");
+  if (!S.notes.length) { box.innerHTML = `<div class="memo-empty">첫 메모를 남겨보세요</div>`; return; }
+  const today = isoDate(new Date());
+  let lastDay = "", html = "";
+  for (const n of S.notes) {
+    const d = new Date(n.created_at), day = isoDate(d);
+    if (day !== lastDay) {
+      html += `<div class="memo-day">${day === today ? "오늘" : `${d.getMonth() + 1}월 ${d.getDate()}일 ${WD[d.getDay()]}요일`}</div>`;
+      lastDay = day;
+    }
+    html += `<div class="memo-msg"><button type="button" class="memo-del" data-delnote="${n.id}" aria-label="삭제">×</button><div class="memo-bubble">${esc(n.text)}</div><span class="memo-time">${pad(d.getHours())}:${pad(d.getMinutes())}</span></div>`;
+  }
+  box.innerHTML = html;
+  box.scrollTop = box.scrollHeight;
+}
+
+$("memo-form").onsubmit = async (e) => {
+  e.preventDefault();
+  const ta = $("memo-input"), text = ta.value.trim(); if (!text) return;
+  ta.value = ""; ta.style.height = "";
+  const { data, error } = await sb.from("notes").insert({ text }).select().single();
+  if (error) { ta.value = text; return toast(error.message); }
+  S.notes.push(data); renderNotes();
+};
+$("memo-input").addEventListener("keydown", (e) => {
+  if (e.key === "Enter" && !e.shiftKey && !e.isComposing) { e.preventDefault(); $("memo-form").requestSubmit(); }
+});
+$("memo-input").addEventListener("input", (e) => { e.target.style.height = ""; e.target.style.height = Math.min(e.target.scrollHeight, 120) + "px"; });
+$("memo-list").onclick = async (e) => {
+  const b = e.target.closest("[data-delnote]"); if (!b) return;
+  const id = b.dataset.delnote;
+  S.notes = S.notes.filter((n) => n.id !== id); renderNotes();
+  const { error } = await sb.from("notes").delete().eq("id", id);
+  if (error) { toast(error.message); loadAll(); }
+};
+
 // ---------- 공통 ----------
-function render() { renderGroups(); renderTodos(); }
+function render() { renderGroups(); renderTodos(); renderNotes(); }
 let toastTimer;
 function toast(msg) {
   const el = $("status"); el.textContent = msg; el.classList.add("show");
