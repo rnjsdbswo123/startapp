@@ -105,6 +105,7 @@ $("pw-form").onsubmit = async (e) => {
   toast("비밀번호가 설정됐어요. 이제 어느 PC에서든 이메일 + 비밀번호로 로그인하세요.");
 };
 const DEMO = new URLSearchParams(location.search).has("demo");
+const DEMO_ONE = new URLSearchParams(location.search).get("demo") === "1";
 if (DEMO) {
   // ?demo : 로그인 없이 샘플 데이터로 화면만 미리보기 (저장 안 됨)
   S.session = { user: { email: "demo" } };
@@ -113,7 +114,7 @@ if (DEMO) {
     ["구글", "Gmail", "https://mail.google.com"], ["구글", "캘린더", "https://calendar.google.com"], ["구글", "드라이브", "https://drive.google.com"],
     ["개발", "GitHub", "https://github.com"], ["개발", "Claude", "https://claude.ai"],
     ["일상", "유튜브", "https://www.youtube.com"], ["일상", "네이버", "https://www.naver.com"],
-  ].map(([group_name, title, url], i) => ({ id: "l" + i, group_name, title, url, position: i }));
+  ].filter((x) => !DEMO_ONE || x[0] === "구글").map(([group_name, title, url], i) => ({ id: "l" + i, group_name, title, url, position: i }));
   S.todos = [
     ["농장ERP 입고 데이터 확인", false, "today"], ["트립팜스 예약 문의 답장", false, "today"], ["주간 회의 자료 정리", true, "today"], ["서버 백업 스크립트 점검", false, "week"],
   ].map(([text, done, list], i) => ({ id: "t" + i, text, done, list, position: i }));

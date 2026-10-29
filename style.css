@@ -37,8 +37,8 @@ button{font:inherit}
 
 /* main grid */
 .main{flex:1;min-height:0;display:grid;grid-template-columns:minmax(0,1fr) 320px;gap:24px}
-.groups{min-height:0;overflow:auto;display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:14px;align-content:start}
-.groups.wide{grid-template-columns:repeat(auto-fit,minmax(240px,1fr))}
+.groups{min-height:0;overflow:auto;display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:14px;align-content:start}
+.groups.wide{grid-template-columns:repeat(auto-fill,minmax(240px,1fr))}
 .group{display:flex;flex-direction:column;padding:16px 12px 10px;border:1px solid var(--line);border-radius:14px;background:var(--surface);transition:background .15s,border-color .15s;min-width:0}
 .group:hover{background:var(--surface-h);border-color:var(--line-s)}
 .group-head{display:flex;justify-content:space-between;align-items:baseline;padding:0 8px 10px}
